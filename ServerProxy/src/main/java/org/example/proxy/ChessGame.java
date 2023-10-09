@@ -1,4 +1,4 @@
-package org.example.Proxy;
+package org.example.proxy;
 
 import com.google.gson.JsonObject;
 import org.example.exceptions.IllegalMoveException;

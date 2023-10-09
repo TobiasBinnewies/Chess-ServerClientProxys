@@ -1,4 +1,4 @@
-package org.example.Proxy;
+package org.example.proxy;
 
 import org.example.exceptions.GameException;
 import org.example.exceptions.IllegalMoveException;
