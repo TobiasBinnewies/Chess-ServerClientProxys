@@ -17,4 +17,6 @@ public interface IChessServer {
     void movePiece(IPlayer player, String gameId, int fromX, int fromY, int toX, int toY, String promotionFigure) throws GameException, PlayerException, IllegalMoveException;
 
     JsonObject getBoard(String gameId) throws GameException;
+
+    void endConnection();
 }

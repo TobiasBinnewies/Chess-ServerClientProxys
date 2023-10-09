@@ -38,6 +38,9 @@ public class ChessServer implements IChessServer {
     public void leaveGame(IPlayer player, String gameId) throws GameException {
         ChessGame game = getGame(gameId);
         game.leave(player);
+        if (game.isEmpty()) {
+            games.remove(gameId);
+        }
     }
 
     @Override
@@ -55,7 +58,7 @@ public class ChessServer implements IChessServer {
         return game.getBoard();
     }
 
-    private ChessGame getGame(String gameId) throws GameException {
+    public ChessGame getGame(String gameId) throws GameException {
         ChessGame game = games.get(gameId);
         if (game == null) {
             throw new GameException("Game with id " + gameId + " does not exist");

@@ -77,6 +77,11 @@ public class PlayerServerProxy implements Runnable {
         }
     }
 
+    public void endConnection() throws IOException {
+        this.running = false;
+        socket.close();
+    }
+
     private void updateGame(RpcMessage message) {
         JsonObject json = JsonParser.parseString(message.getMessage()).getAsJsonObject();
         try {
@@ -103,12 +108,6 @@ public class PlayerServerProxy implements Runnable {
 
     private void startGame() {
         player.startGame();
-        writer.sendSuccess();
-    }
-
-    private void endConnection() throws IOException {
-        this.running = false;
-        socket.close();
         writer.sendSuccess();
     }
 

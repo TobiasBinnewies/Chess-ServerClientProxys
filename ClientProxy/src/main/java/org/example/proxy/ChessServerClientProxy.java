@@ -10,17 +10,23 @@ import org.example.rpc.RpcMessage;
 import org.example.rpc.RpcReader;
 import org.example.rpc.RpcWriter;
 import org.example.ui.figure.Color;
+import org.example.utils.LocalIPv4;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class ChessServerClientProxy implements IChessServer {
     private final Socket socket;
     private final RpcWriter writer;
     private final RpcReader reader;
+
+    private final Set<PlayerServerProxy> openPlayerProxys = new HashSet<>();
 
     private enum Protocol {
         MOVE_PIECE, GET_BOARD, CREATE_GAME, JOIN_GAME, LEAVE_GAME, END_CONNECTION;
@@ -145,13 +151,29 @@ public class ChessServerClientProxy implements IChessServer {
         }
     }
 
+    @Override
+    public void endConnection() {
+        try {
+            for (PlayerServerProxy playerServerProxy : openPlayerProxys) {
+                playerServerProxy.endConnection();
+            }
+            reader.readRpcMessage();
+            writer.sendRpcMessage(
+                    new RpcMessage(Protocol.END_CONNECTION.ordinal())
+            );
+            socket.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
     private void sendPlayer(IPlayer player) throws IOException {
         reader.readRpcMessage();
         writer.sendRpcMessage(new RpcMessage(0, player.getId()));
         RpcMessage message = reader.readRpcMessage();
         if (message.getCode() == 999) {
             ServerSocket serverSocket = new ServerSocket(0);
-            String ip = serverSocket.getInetAddress().getHostAddress();
+            String ip = LocalIPv4.get();
             int port = serverSocket.getLocalPort();
             writer.sendRpcMessage(
                     new RpcMessage(0, ip, String.valueOf(port))
@@ -159,6 +181,7 @@ public class ChessServerClientProxy implements IChessServer {
             Socket socket = serverSocket.accept();
             PlayerServerProxy playerServerProxy = new PlayerServerProxy(socket, player);
             Thread t = new Thread(playerServerProxy);
+            openPlayerProxys.add(playerServerProxy);
             t.start();
         }
     }

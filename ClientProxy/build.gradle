@@ -1,12 +1,40 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "com.github.johnrengelman:shadow:8.1.1"
+    }
+}
+
+
 plugins {
     id 'java'
     id 'application'
+    id "com.github.johnrengelman.shadow" version "8.1.1"
     id 'org.openjfx.javafxplugin' version '0.1.0'
 }
+
+apply plugin: "com.github.johnrengelman.shadow"
+
+targetCompatibility = 17
+sourceCompatibility = 17
 
 javafx {
     version = "21"
     modules = ['javafx.controls']
+}
+
+shadowJar {
+    archiveBaseName.set('ChessGame')
+//    configurations = [project.configurations.compile]
+}
+
+application {
+    mainModule = 'org.example' // name defined in module-info.java
+    mainClass = 'org.example.Main'
 }
 
 group = 'org.example'

@@ -64,7 +64,6 @@ public class PlayerClientProxy implements IPlayer {
                 throw new RuntimeException(msg.getMessage());
             }
         } catch (IOException e) {
-            // TODO: Send error message to other player
             throw new RuntimeException(e.getMessage());
         }
     }
@@ -90,6 +89,19 @@ public class PlayerClientProxy implements IPlayer {
 
     @Override
     public boolean stillAlive() {
+        boolean stillAlive = stillAliveIntern();
+        if (!stillAlive) {
+            try {
+                currentGame.removePlayer(this);
+                socket.close();
+            } catch (IOException e) {
+                return false;
+            }
+        }
+        return stillAlive;
+    }
+
+    private boolean stillAliveIntern() {
         try {
             reader.readRpcMessage();
             writer.sendMessage(Protocol.STILL_ALIVE.ordinal(), "");

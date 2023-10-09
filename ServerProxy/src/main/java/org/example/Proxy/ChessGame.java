@@ -14,7 +14,6 @@ import org.example.game.figure.Pawn;
 
 import java.util.Objects;
 
-// TODO: Close Connection from old client when new client joins / figure out how to check if client is still connected
 public class ChessGame {
     private final String id;
     private IPlayer whitePlayer;
@@ -82,13 +81,13 @@ public class ChessGame {
     }
 
     public Color join(IPlayer player) throws PlayerException {
-        if (whitePlayer == null || Objects.equals(whitePlayer.getId(), player.getId())) {
+        if (whitePlayer == null) {
             whitePlayer = player;
             startGame();
             messagePlayers("White player has joined");
             return Color.WHITE;
         }
-        if (blackPlayer == null || Objects.equals(blackPlayer.getId(), player.getId())) {
+        if (blackPlayer == null) {
             blackPlayer = player;
             startGame();
             messagePlayers("Black player has joined");
@@ -130,6 +129,10 @@ public class ChessGame {
 
     public boolean isFinished() {
         return board.isGameOver();
+    }
+
+    public boolean isEmpty() {
+        return whitePlayer == null && blackPlayer == null;
     }
 
     private void startGame() {

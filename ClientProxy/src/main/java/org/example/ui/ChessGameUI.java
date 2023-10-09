@@ -27,6 +27,7 @@ import java.net.UnknownHostException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 
 public class ChessGameUI extends Application {
 
@@ -96,6 +97,10 @@ public class ChessGameUI extends Application {
         primaryStage.setMinHeight(primaryStage.getHeight());
 
         getServerConnectionPopup().show(primaryStage);
+
+        primaryStage.setOnCloseRequest(event -> {
+            proxy.endConnection();
+        });
     }
 
     private Popup getServerConnectionPopup() {
@@ -151,7 +156,6 @@ public class ChessGameUI extends Application {
                 String ip = ipInput.getText();
                 int port = Integer.parseInt(portInput.getText());
                 Socket socket = new Socket(ip, port);
-                // TODO: Save player id
                 player = new Player(UUID.randomUUID().toString());
                 proxy = new ChessServerClientProxy(socket);
                 popup.hide();

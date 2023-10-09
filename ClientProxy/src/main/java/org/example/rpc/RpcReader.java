@@ -12,7 +12,7 @@ public class RpcReader extends BufferedReader {
     public RpcMessage readRpcMessage() throws IOException {
         try {
             String msg = super.readLine();
-            System.out.println(Thread.currentThread().threadId() + ": Reading: " + msg);
+//            System.out.println(Thread.currentThread().threadId() + ": Reading: " + msg);
             return new RpcMessage(msg);
         } catch (NumberFormatException e) {
             throw new IOException(e);

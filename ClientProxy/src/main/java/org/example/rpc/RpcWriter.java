@@ -15,7 +15,7 @@ public class RpcWriter extends PrintWriter {
     }
 
     public void sendRpcMessage(RpcMessage msg) {
-        System.out.println(Thread.currentThread().threadId() + ": Writing: " + msg.toString());
+//        System.out.println(Thread.currentThread().threadId() + ": Writing: " + msg.toString());
         super.println(msg);
         super.flush();
     }

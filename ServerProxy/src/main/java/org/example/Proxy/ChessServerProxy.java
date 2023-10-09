@@ -95,8 +95,14 @@ public class ChessServerProxy implements Runnable {
 
     public void endConnection() throws IOException {
         this.running = false;
+        for(IPlayer player : connectedPlayers.values()) {
+            try {
+                chessServer.leaveGame(player, player.currentGame().getId());
+            } catch (GameException | PlayerException e) {
+                // Ignore
+            }
+        }
         socket.close();
-        writer.sendSuccess();
     }
 
     public void movePiece(RpcMessage message) {
@@ -112,7 +118,6 @@ public class ChessServerProxy implements Runnable {
             );
             writer.sendSuccess();
         } catch (IllegalMoveException e) {
-            // TODO: Send message to enemy player, kick player from game
             writer.sendMessage(e.getErrorCode(), e.getMessage());
         } catch (GameException e) {
             writer.sendMessage(e.getErrorCode(), e.getMessage());
