@@ -1,7 +1,7 @@
 package org.example;
 
-import org.example.Proxy.ChessServer;
-import org.example.Proxy.ChessServerProxy;
+import org.example.proxy.ChessServer;
+import org.example.proxy.ChessServerProxy;
 import org.example.utils.LocalIPv4;
 
 import java.io.IOException;
@@ -10,7 +10,7 @@ import java.net.Socket;
 
 public class Main {
     public static void main(String[] args) throws IOException {
-        ServerSocket serverSocket = new ServerSocket(9080);
+        ServerSocket serverSocket = new ServerSocket(9070);
         System.out.println("IP: " + LocalIPv4.get());
         System.out.println("Port: " + serverSocket.getLocalPort());
         ChessServer chessServer = new ChessServer();

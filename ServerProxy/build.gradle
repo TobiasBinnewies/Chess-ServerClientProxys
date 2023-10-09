@@ -1,9 +1,37 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "com.github.johnrengelman:shadow:8.1.1"
+    }
+}
+
 plugins {
     id 'java'
+    id 'application'
+    id "com.github.johnrengelman.shadow" version "8.1.1"
 }
+
+apply plugin: "com.github.johnrengelman.shadow"
+
+targetCompatibility = 19
+sourceCompatibility = 19
 
 group = 'org.example'
 version = '1.0-SNAPSHOT'
+
+shadowJar {
+    archiveBaseName.set('ChessServer')
+//    configurations = [project.configurations.compile]
+}
+
+application {
+    mainModule = 'org.example' // name defined in module-info.java
+    mainClass = 'org.example.Main'
+}
 
 repositories {
     mavenCentral()
