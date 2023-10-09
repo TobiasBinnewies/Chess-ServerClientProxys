@@ -2,18 +2,23 @@ package org.example.ui;
 
 import com.google.gson.JsonObject;
 import javafx.application.Application;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
+import javafx.event.EventType;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
+import javafx.scene.text.TextAlignment;
 import javafx.stage.Popup;
+import javafx.util.Pair;
 import org.example.exceptions.GameException;
 import org.example.exceptions.JsonException;
 import org.example.exceptions.PlayerException;
@@ -96,199 +101,206 @@ public class ChessGameUI extends Application {
         primaryStage.setMinWidth(primaryStage.getWidth());
         primaryStage.setMinHeight(primaryStage.getHeight());
 
-        getServerConnectionPopup().show(primaryStage);
+//        getServerConnectionPopup().show(primaryStage);
+        new ConnectionDialog().showAndWait();
 
         primaryStage.setOnCloseRequest(event -> {
             proxy.endConnection();
         });
+        new GameConnectionDialog().showAndWait();
     }
 
-    private Popup getServerConnectionPopup() {
-        final Popup popup = new Popup();
-        BorderPane pane = new BorderPane();
+    class ConnectionDialog extends Dialog<Pair<String, Integer>> {
+        boolean valid = false;
+        ConnectionDialog() {
+            BorderPane pane = new BorderPane();
 
-        Text title = new Text("Server Connection");
-        title.setStyle("-fx-font-weight: bold");
-        title.setStyle("-fx-font-size: 20px");
+            Text title = new Text("Server Connection");
+            title.setStyle("-fx-font-weight: bold");
+            title.setStyle("-fx-font-size: 20px");
 
-        TextField ipInput = new TextField();
-        ipInput.setText("localhost");
-        Text ipLabel = new Text("IP Address");
-//        ipInput.set();
-        TextField portInput = new TextField();
-        portInput.setText("9080");
-        Text portLabel = new Text("Port");
+            TextField ipInput = new TextField();
+            ipInput.setText("172.30.33.15");
+            Text ipLabel = new Text("IP Address");
 
-        GridPane table = new GridPane();
-        table.add(ipLabel, 0, 0);
-        table.add(ipInput, 1, 0);
-        table.add(portLabel, 0, 1);
-        table.add(portInput, 1, 1);
-        table.add(popupMessage, 0, 2, 2, 1);
-        table.setAlignment(Pos.CENTER);
-        table.setHgap(5);
-        table.setVgap(5);
+            TextField portInput = new TextField();
+            portInput.setText("9080");
+            Text portLabel = new Text("Port");
 
-        Button connectButton = getConnectButton(popup, ipInput, portInput);
+            GridPane table = new GridPane();
+            table.add(ipLabel, 0, 0);
+            table.add(ipInput, 1, 0);
+            table.add(portLabel, 0, 1);
+            table.add(portInput, 1, 1);
+            table.add(popupMessage, 0, 2, 2, 1);
+            table.setAlignment(Pos.CENTER);
+            table.setHgap(5);
+            table.setVgap(5);
 
-        pane.setPadding(new Insets(5, 5, 5, 5));
+            pane.setPadding(new Insets(5, 5, 5, 5));
 
-        pane.setTop(title);
-        pane.setCenter(table);
-        pane.setBottom(connectButton);
-        BorderPane.setAlignment(connectButton, Pos.CENTER);
-        BorderPane.setAlignment(title, Pos.CENTER);
-        BorderPane.setMargin(title, new Insets(0, 0, 5, 0));
-        BorderPane.setMargin(connectButton, new Insets(5, 0, 0, 0));
+            pane.setTop(title);
+            pane.setCenter(table);
+            BorderPane.setAlignment(title, Pos.CENTER);
+            BorderPane.setMargin(title, new Insets(0, 0, 5, 0));
 
+            getDialogPane().setContent(pane);
 
-        Rectangle bg = new Rectangle(235, 160, Color.WHITE);
+            ButtonType connectBtnType = new ButtonType("Connect", ButtonBar.ButtonData.APPLY);
+            getDialogPane().getButtonTypes().add(connectBtnType);
+            Button connectBtn = (Button) getDialogPane().lookupButton(connectBtnType);
+            connectBtn.addEventFilter(ActionEvent.ACTION, event -> {
+                try {
+                    String ip = ipInput.getText();
+                    int port = Integer.parseInt(portInput.getText());
+                    Socket socket = new Socket(ip, port);
+                    player = new Player(UUID.randomUUID().toString());
+                    proxy = new ChessServerClientProxy(socket);
+                    displayPopupMessage("");
 
-        popup.getContent().addAll(bg, pane);
+                    valid = true;
+                } catch (NumberFormatException e) {
+                    ChessGameUI.displayPopupMessage("Invalid port");
+                    event.consume();
+                } catch (UnknownHostException e) {
+                    ChessGameUI.displayPopupMessage("Unknown host");
+                    event.consume();
+                } catch (IOException e) {
+                    ChessGameUI.displayPopupMessage("Connection failed");
+                    event.consume();
+                }
+            });
 
-        return popup;
+            ButtonType quitBtnType = new ButtonType("Quit", ButtonBar.ButtonData.CANCEL_CLOSE);
+            getDialogPane().getButtonTypes().add(quitBtnType);
+            Button quitBtn = (Button) getDialogPane().lookupButton(quitBtnType);
+            quitBtn.addEventFilter(ActionEvent.ACTION, event -> {
+                System.exit(0);
+            });
+
+            setOnCloseRequest(e -> {
+                if (valid) return;
+                System.exit(0);
+            });
+        }
     }
 
-    private Button getConnectButton(Popup popup, TextField ipInput, TextField portInput) {
-        Button connectButton = new Button("Connect");
-        connectButton.setOnAction(event -> {
-            try {
-                String ip = ipInput.getText();
-                int port = Integer.parseInt(portInput.getText());
-                Socket socket = new Socket(ip, port);
-                player = new Player(UUID.randomUUID().toString());
-                proxy = new ChessServerClientProxy(socket);
-                popup.hide();
-                displayPopupMessage("");
-                getGameConnectionPopup().show(this.primaryStage);
-            } catch (NumberFormatException e) {
-                ChessGameUI.displayPopupMessage("Invalid port");
-            } catch (UnknownHostException e) {
-                ChessGameUI.displayPopupMessage("Unknown host");
-            } catch (IOException e) {
-                ChessGameUI.displayPopupMessage("Connection failed");
-            }
-        });
-        return connectButton;
-    }
-
-    private Popup getGameConnectionPopup() {
-        final Popup popup = new Popup();
-        Text title = new Text("Game Connection");
-        title.setStyle("-fx-font-weight: bold");
-        title.setStyle("-fx-font-size: 20px");
+    class GameConnectionDialog extends Dialog<String> {
+        boolean valid = false;
+        GameConnectionDialog() {
+            Text title = new Text("Game Connection");
+            title.setStyle("-fx-font-weight: bold");
+            title.setStyle("-fx-font-size: 20px");
 
 
-        BorderPane createPane = new BorderPane();
+            HBox box = new HBox();
+            box.setSpacing(10);
 
-        ToggleSwitch colorSwitch = new ToggleSwitch();
-        Text colorLabel = new Text("Color");
-        Text whiteLabel = new Text("White");
-        Text blackLabel = new Text("Black");
-        Button createButton = getCreateButton(popup, colorSwitch);
+            ToggleSwitch colorSwitch = new ToggleSwitch();
+            Text colorLabel = new Text("Color");
+            colorLabel.setStyle("-fx-font-weight: bold");
+            colorLabel.setTextAlignment(TextAlignment.CENTER);
+            Text whiteLabel = new Text("White");
+            Text blackLabel = new Text("Black");
 
-        GridPane colorTable = new GridPane();
-        colorTable.add(whiteLabel, 0, 0);
-        colorTable.add(blackLabel, 2, 0);
-        colorTable.add(colorSwitch, 1, 0);
-        colorTable.setHgap(5);
+            GridPane colorTable = new GridPane();
+            colorTable.add(whiteLabel, 0, 0);
+            colorTable.add(blackLabel, 2, 0);
+            colorTable.add(colorSwitch, 1, 0);
+            colorTable.setHgap(5);
 
-        GridPane createTable = new GridPane();
-        createTable.add(colorLabel, 0, 0);
-        createTable.add(colorTable, 1, 0);
-        createTable.setAlignment(Pos.CENTER);
-        createTable.setHgap(5);
+            GridPane createTable = new GridPane();
+            createTable.add(colorLabel, 0, 0);
+            createTable.add(colorTable, 0, 1);
+            createTable.setAlignment(Pos.CENTER);
+            createTable.setVgap(5);
 
-        createPane.setTop(createTable);
-        createPane.setBottom(createButton);
-        BorderPane.setAlignment(createButton, Pos.CENTER);
-        BorderPane.setMargin(createButton, new Insets(5, 0, 0, 0));
+            box.getChildren().add(createTable);
 
+            TextField gameIdInput = new TextField();
+            Text gameIdLabel = new Text("Game ID");
+            gameIdLabel.setStyle("-fx-font-weight: bold");
+            gameIdLabel.setTextAlignment(TextAlignment.CENTER);
 
-        BorderPane joinPane = new BorderPane();
+            GridPane joinTable = new GridPane();
+            joinTable.add(gameIdLabel, 0, 0);
+            joinTable.add(gameIdInput, 0, 1);
+            joinTable.setAlignment(Pos.CENTER);
+            joinTable.setVgap(5);
 
-        TextField gameIdInput = new TextField();
-        Text gameIdLabel = new Text("Game ID");
-        Button joinButton = getJoinButton(popup, gameIdInput);
+            box.getChildren().add(joinTable);
 
-        GridPane joinTable = new GridPane();
-        joinTable.add(gameIdLabel, 0, 2);
-        joinTable.add(gameIdInput, 1, 2);
-        joinTable.setAlignment(Pos.CENTER);
-        joinTable.setHgap(5);
+            BorderPane pane = new BorderPane();
 
-        joinPane.setTop(joinTable);
-        joinPane.setBottom(joinButton);
-        BorderPane.setAlignment(joinButton, Pos.CENTER);
-        BorderPane.setMargin(joinButton, new Insets(5, 0, 0, 0));
+            pane.setTop(title);
+            pane.setCenter(box);
+            pane.setBottom(popupMessage);
+            BorderPane.setAlignment(title, Pos.CENTER);
+            BorderPane.setAlignment(message, Pos.CENTER);
+            BorderPane.setMargin(title, new Insets(0, 0, 5, 0));
+            BorderPane.setMargin(message, new Insets(5, 0, 0, 0));
 
+            getDialogPane().setContent(pane);
 
-        GridPane table = new GridPane();
+            ButtonType joinBtnType = new ButtonType("Join", ButtonBar.ButtonData.APPLY);
+            ButtonType createBtnType = new ButtonType("Create", ButtonBar.ButtonData.APPLY);
 
-        table.add(createPane, 0, 0);
-        table.add(joinPane, 0, 1);
-        table.setAlignment(Pos.CENTER);
-        table.setVgap(5);
+            getDialogPane().getButtonTypes().addAll(createBtnType, joinBtnType);
 
+            Button joinBtn = (Button) getDialogPane().lookupButton(joinBtnType);
+            Button createBtn = (Button) getDialogPane().lookupButton(createBtnType);
 
-        BorderPane pane = new BorderPane();
+            joinBtn.addEventFilter(ActionEvent.ACTION, event -> {
+                if (gameIdInput.getText().isEmpty()) {
+                    ChessGameUI.displayPopupMessage("Game ID cannot be empty");
+                    event.consume();
+                    return;
+                }
+                try {
+                    String id = gameIdInput.getText();
+                    player.setColor(proxy.joinGame(player, id));
+                    gameId = id;
 
-        pane.setTop(title);
-        pane.setCenter(table);
-        pane.setBottom(popupMessage);
-        BorderPane.setAlignment(title, Pos.CENTER);
-        BorderPane.setAlignment(message, Pos.CENTER);
-        BorderPane.setMargin(title, new Insets(0, 0, 5, 0));
+                    loadGame();
+                    valid = true;
+                } catch (GameException | PlayerException | RuntimeException e) {
+                    ChessGameUI.displayPopupMessage(e.getMessage());
+                    event.consume();
+                }
+            });
+            createBtn.addEventFilter(ActionEvent.ACTION, event -> {
+                try {
+                    org.example.ui.figure.Color color = colorSwitch.getState() ? org.example.ui.figure.Color.BLACK : org.example.ui.figure.Color.WHITE;
+                    player.setColor(color);
 
+                    gameId = proxy.createGame(player, color);
 
-        Rectangle bg = new Rectangle(235, 160, Color.WHITE);
+                    loadGame();
+                    valid = true;
+                } catch (JsonException | RuntimeException e) {
+                    ChessGameUI.displayPopupMessage(e.getMessage());
+                    event.consume();
+                }
+            });
 
-        popup.getContent().addAll(bg, pane);
-        popup.setWidth(235);
-        popup.setHeight(160);
+            ButtonType quitBtnType = new ButtonType("Quit", ButtonBar.ButtonData.CANCEL_CLOSE);
+            getDialogPane().getButtonTypes().add(quitBtnType);
+            Button quitBtn = (Button) getDialogPane().lookupButton(quitBtnType);
+            quitBtn.addEventFilter(ActionEvent.ACTION, event -> {
+                proxy.endConnection();
+                System.exit(0);
+            });
 
-        return popup;
-    }
-
-    private Button getCreateButton(Popup popup, ToggleSwitch colorSwitch) {
-        Button connectButton = new Button("Create");
-        connectButton.setOnAction(event -> {
-            try {
-                org.example.ui.figure.Color color = colorSwitch.getState() ? org.example.ui.figure.Color.BLACK : org.example.ui.figure.Color.WHITE;
-                player.setColor(color);
-
-                gameId = proxy.createGame(player, color);
-
-                loadGame();
-
-                popup.hide();
-            } catch (JsonException | RuntimeException e) {
-                ChessGameUI.displayPopupMessage(e.getMessage());
-            }
-        });
-        return connectButton;
-    }
-
-    private Button getJoinButton(Popup popup, TextField gameIdInput) {
-        Button connectButton = new Button("Join");
-        connectButton.setOnAction(event -> {
-            try {
-                String id = gameIdInput.getText();
-                player.setColor(proxy.joinGame(player, id));
-                gameId = id;
-
-                loadGame();
-
-                popup.hide();
-            } catch (GameException | PlayerException | RuntimeException e) {
-                ChessGameUI.displayPopupMessage(e.getMessage());
-            }
-        });
-        return connectButton;
+            setOnCloseRequest(e -> {
+                if (valid) return;
+                proxy.endConnection();
+                System.exit(0);
+            });
+        }
     }
 
     public static void showGameConnectionPopup() {
-        instance.getGameConnectionPopup().show(instance.primaryStage);
+        instance.new GameConnectionDialog().showAndWait();
     }
 
     private void loadGame() {
@@ -337,7 +349,7 @@ public class ChessGameUI extends Application {
         instance.gameId = null;
         instance.board.clear();
         instance.disableOptionButtons(true);
-        instance.getGameConnectionPopup().show(instance.primaryStage);
+        showGameConnectionPopup();
     }
 
     public static ChessBoard getBoard() {

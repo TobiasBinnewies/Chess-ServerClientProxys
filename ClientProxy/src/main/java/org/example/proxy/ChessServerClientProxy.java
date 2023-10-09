@@ -155,6 +155,9 @@ public class ChessServerClientProxy implements IChessServer {
     public void endConnection() {
         try {
             for (PlayerServerProxy playerServerProxy : openPlayerProxys) {
+                if (playerServerProxy == null) {
+                    continue;
+                }
                 playerServerProxy.endConnection();
             }
             reader.readRpcMessage();
