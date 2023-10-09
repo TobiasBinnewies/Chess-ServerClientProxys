@@ -3,8 +3,6 @@ package org.example.ui;
 import com.google.gson.JsonObject;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
-import javafx.event.EventType;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -12,12 +10,8 @@ import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
-import javafx.stage.Popup;
 import javafx.util.Pair;
 import org.example.exceptions.GameException;
 import org.example.exceptions.JsonException;
@@ -32,19 +26,20 @@ import java.net.UnknownHostException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.TimeoutException;
 
 public class ChessGameUI extends Application {
+    private final String DEFAULT_IP = "localhost";
+    private final int DEFAULT_PORT = 9070;
 
-    private Label message;
+    private static ChessGameUI instance;
+    private final Label message = new Label();
     private final Label popupMessage = new Label();
-    private ChessBoard board;
+    private final ChessBoard board = new ChessBoard();
     private ChessServerClientProxy proxy;
     private Player player;
 
     private boolean gameStarted = false;
     private String gameId;
-    private static ChessGameUI instance;
 
     private final Set<OptionButton> optionButtons = new HashSet<>();
 
@@ -52,7 +47,6 @@ public class ChessGameUI extends Application {
 
     @Override
     public void start(javafx.stage.Stage primaryStage) {
-
         instance = this;
         this.primaryStage = primaryStage;
 
@@ -67,7 +61,7 @@ public class ChessGameUI extends Application {
             table.add(newColLabel(i), i + 1, 0, 1, 1);
             table.add(newColLabel(i), i + 1, 9, 1, 1);
         }
-        table.add(board = new ChessBoard(), 1, 1, 8, 8);
+        table.add(board, 1, 1, 8, 8);
         table.setAlignment(Pos.CENTER);
         pane.setCenter(table);
 
@@ -85,12 +79,9 @@ public class ChessGameUI extends Application {
         menu.setRight(options);
 
         //status text
-        message = new Label();
         message.setAlignment(Pos.BOTTOM_LEFT);
         message.setPadding(new Insets(10, 0, 10, 10));
         menu.setLeft(message);
-
-//        status.setText("TEST");
 
         pane.setBottom(menu);
 
@@ -104,14 +95,16 @@ public class ChessGameUI extends Application {
 //        getServerConnectionPopup().show(primaryStage);
         new ConnectionDialog().showAndWait();
 
-        primaryStage.setOnCloseRequest(event -> {
-            proxy.endConnection();
-        });
+        primaryStage.setOnCloseRequest(event -> proxy.endConnection());
         new GameConnectionDialog().showAndWait();
     }
 
     class ConnectionDialog extends Dialog<Pair<String, Integer>> {
         boolean valid = false;
+
+        TextField ipInput = new TextField();
+        TextField portInput = new TextField();
+
         ConnectionDialog() {
             BorderPane pane = new BorderPane();
 
@@ -119,12 +112,10 @@ public class ChessGameUI extends Application {
             title.setStyle("-fx-font-weight: bold");
             title.setStyle("-fx-font-size: 20px");
 
-            TextField ipInput = new TextField();
-            ipInput.setText("172.30.33.15");
+            ipInput.setText(DEFAULT_IP);
             Text ipLabel = new Text("IP Address");
 
-            TextField portInput = new TextField();
-            portInput.setText("9080");
+            portInput.setText(String.valueOf(DEFAULT_PORT));
             Text portLabel = new Text("Port");
 
             GridPane table = new GridPane();
@@ -146,6 +137,16 @@ public class ChessGameUI extends Application {
 
             getDialogPane().setContent(pane);
 
+            createConnectButton();
+            createQuitButton();
+
+            setOnCloseRequest(e -> {
+                if (valid) return;
+                System.exit(0);
+            });
+        }
+
+        private void createConnectButton() {
             ButtonType connectBtnType = new ButtonType("Connect", ButtonBar.ButtonData.APPLY);
             getDialogPane().getButtonTypes().add(connectBtnType);
             Button connectBtn = (Button) getDialogPane().lookupButton(connectBtnType);
@@ -170,23 +171,22 @@ public class ChessGameUI extends Application {
                     event.consume();
                 }
             });
+        }
 
+        private void createQuitButton() {
             ButtonType quitBtnType = new ButtonType("Quit", ButtonBar.ButtonData.CANCEL_CLOSE);
             getDialogPane().getButtonTypes().add(quitBtnType);
             Button quitBtn = (Button) getDialogPane().lookupButton(quitBtnType);
-            quitBtn.addEventFilter(ActionEvent.ACTION, event -> {
-                System.exit(0);
-            });
-
-            setOnCloseRequest(e -> {
-                if (valid) return;
-                System.exit(0);
-            });
+            quitBtn.addEventFilter(ActionEvent.ACTION, event -> System.exit(0));
         }
     }
 
     class GameConnectionDialog extends Dialog<String> {
         boolean valid = false;
+
+        ToggleSwitch colorSwitch = new ToggleSwitch();
+        TextField gameIdInput = new TextField();
+
         GameConnectionDialog() {
             Text title = new Text("Game Connection");
             title.setStyle("-fx-font-weight: bold");
@@ -196,7 +196,6 @@ public class ChessGameUI extends Application {
             HBox box = new HBox();
             box.setSpacing(10);
 
-            ToggleSwitch colorSwitch = new ToggleSwitch();
             Text colorLabel = new Text("Color");
             colorLabel.setStyle("-fx-font-weight: bold");
             colorLabel.setTextAlignment(TextAlignment.CENTER);
@@ -217,7 +216,6 @@ public class ChessGameUI extends Application {
 
             box.getChildren().add(createTable);
 
-            TextField gameIdInput = new TextField();
             Text gameIdLabel = new Text("Game ID");
             gameIdLabel.setStyle("-fx-font-weight: bold");
             gameIdLabel.setTextAlignment(TextAlignment.CENTER);
@@ -242,14 +240,21 @@ public class ChessGameUI extends Application {
 
             getDialogPane().setContent(pane);
 
+            createCreateButton();
+            createJoinButton();
+            createQuitButton();
+
+            setOnCloseRequest(e -> {
+                if (valid) return;
+                proxy.endConnection();
+                System.exit(0);
+            });
+        }
+
+        private void createJoinButton() {
             ButtonType joinBtnType = new ButtonType("Join", ButtonBar.ButtonData.APPLY);
-            ButtonType createBtnType = new ButtonType("Create", ButtonBar.ButtonData.APPLY);
-
-            getDialogPane().getButtonTypes().addAll(createBtnType, joinBtnType);
-
+            getDialogPane().getButtonTypes().addAll(joinBtnType);
             Button joinBtn = (Button) getDialogPane().lookupButton(joinBtnType);
-            Button createBtn = (Button) getDialogPane().lookupButton(createBtnType);
-
             joinBtn.addEventFilter(ActionEvent.ACTION, event -> {
                 if (gameIdInput.getText().isEmpty()) {
                     ChessGameUI.displayPopupMessage("Game ID cannot be empty");
@@ -268,6 +273,12 @@ public class ChessGameUI extends Application {
                     event.consume();
                 }
             });
+        }
+
+        private void createCreateButton() {
+            ButtonType createBtnType = new ButtonType("Create", ButtonBar.ButtonData.APPLY);
+            getDialogPane().getButtonTypes().addAll(createBtnType);
+            Button createBtn = (Button) getDialogPane().lookupButton(createBtnType);
             createBtn.addEventFilter(ActionEvent.ACTION, event -> {
                 try {
                     org.example.ui.figure.Color color = colorSwitch.getState() ? org.example.ui.figure.Color.BLACK : org.example.ui.figure.Color.WHITE;
@@ -282,17 +293,13 @@ public class ChessGameUI extends Application {
                     event.consume();
                 }
             });
+        }
 
+        private void createQuitButton() {
             ButtonType quitBtnType = new ButtonType("Quit", ButtonBar.ButtonData.CANCEL_CLOSE);
             getDialogPane().getButtonTypes().add(quitBtnType);
             Button quitBtn = (Button) getDialogPane().lookupButton(quitBtnType);
             quitBtn.addEventFilter(ActionEvent.ACTION, event -> {
-                proxy.endConnection();
-                System.exit(0);
-            });
-
-            setOnCloseRequest(e -> {
-                if (valid) return;
                 proxy.endConnection();
                 System.exit(0);
             });
