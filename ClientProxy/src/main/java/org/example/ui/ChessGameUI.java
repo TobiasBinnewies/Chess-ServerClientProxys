@@ -257,7 +257,7 @@ public class ChessGameUI extends Application {
                     return;
                 }
                 try {
-                    String id = gameIdInput.getText();
+                    String id = gameIdInput.getText().toUpperCase();
                     player.setColor(proxy.joinGame(player, id));
                     gameId = id;
 
@@ -349,6 +349,7 @@ public class ChessGameUI extends Application {
         instance.gameId = null;
         instance.board.clear();
         instance.disableOptionButtons(true);
+        instance.primaryStage.setTitle("Chess");
         showGameConnectionPopup();
     }
 
